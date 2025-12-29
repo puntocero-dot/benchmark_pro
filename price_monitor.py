@@ -38,6 +38,10 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 # Intervalo de revisión en horas (configurable via .env o aquí)
 INTERVALO_HORAS = int(os.getenv("INTERVALO_HORAS", "4"))
 
+# Horario de operación (24h) - Por defecto 08:00 a 19:00
+HORA_INICIO = int(os.getenv("HORA_INICIO", "8"))
+HORA_FIN = int(os.getenv("HORA_FIN", "19"))
+
 # Archivo para persistencia de datos
 ARCHIVO_HISTORIAL = "precios_historial.json"
 
@@ -783,6 +787,28 @@ def revisar_todos_los_competidores() -> None:
     Función principal que revisa todos los competidores activos.
     Esta función es llamada por el scheduler cada 4 horas.
     """
+    # Verificar horario de operación
+    hora_actual = datetime.now().hour
+    
+    # Lógica simple para rango de horas
+    en_horario = False
+    if HORA_INICIO < HORA_FIN:
+        # Rango normal (ej: 8 a 19)
+        if HORA_INICIO <= hora_actual < HORA_FIN:
+            en_horario = True
+    else:
+        # Rango que cruza medianoche (ej: 22 a 06)
+        if hora_actual >= HORA_INICIO or hora_actual < HORA_FIN:
+            en_horario = True
+            
+    if not en_horario:
+        print("\n" + "=" * 60)
+        print(f"💤 MONITOR EN PAUSA - {obtener_timestamp()}")
+        print(f"   Hora actual: {hora_actual}:00")
+        print(f"   Horario operativo: {HORA_INICIO}:00 - {HORA_FIN}:00")
+        print("=" * 60 + "\n")
+        return
+
     print("\n" + "=" * 60)
     print(f"🕐 INICIANDO REVISIÓN - {obtener_timestamp()}")
     print("=" * 60)
