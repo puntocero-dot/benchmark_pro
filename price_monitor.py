@@ -326,73 +326,132 @@ def clasificar_producto(nombre_producto: str) -> Optional[str]:
 
 def extraer_productos_kfc(html: str) -> List[Dict[str, Any]]:
     """
-    Extrae productos específicos de KFC con nombre, precio y categoría.
+    Extrae productos de KFC usando búsqueda heurística por precios ($) y keywords.
+    Robusto contra clases CSS dinámicas/ofuscadas.
     """
     productos = []
     try:
         soup = BeautifulSoup(html, "lxml")
         
-        # KFC: productos están en buttons con h2 para nombre y td para precio
-        botones = soup.select("button")
+        # Estrategia: Buscar todos los elementos de texto que parecen precios
+        # Regex para $10.50, $ 10.50, 10.50
+        precio_pattern = re.compile(r"\$\s*\d+\.\d{2}")
+        precios_found = soup.find_all(string=precio_pattern)
         
-        for boton in botones:
-            nombre_elem = boton.select_one("h2")
-            precio_elem = boton.select_one("td")
-            
-            if nombre_elem and precio_elem:
-                nombre = nombre_elem.get_text(strip=True)
-                precio_texto = precio_elem.get_text(strip=True)
-                precio = limpiar_precio(precio_texto)
+        for precio_node in precios_found:
+            try:
+                # El nodo de texto es hijo de alguien. Subamos buscando contexto.
+                contenedor = precio_node.parent
                 
-                if nombre and precio and precio > 0:
-                    categoria = clasificar_producto(nombre)
-                    if categoria:  # Solo productos que caen en nuestras categorías
+                # Subir hasta 6 niveles buscando un contenedor que tenga texto de producto
+                nombre_encontrado = None
+                precio_float = limpiar_precio(precio_node)
+                
+                if not precio_float or precio_float <= 0:
+                    continue
+                    
+                # Buscar en los padres
+                temp_pointer = contenedor
+                for _ in range(6): 
+                    if not temp_pointer: break
+                    
+                    texto_completo = temp_pointer.get_text(" ", strip=True)
+                    
+                    # Intentar clasificar con el texto acumulado del contenedor
+                    categoria = clasificar_producto(texto_completo)
+                    
+                    if categoria:
+                        # Limpiar el nombre (tomar primeros 50 chars o algo razonable si es muy largo)
+                        nombre_limpio = texto_completo.split("$")[0].strip() # Cortar antes del precio si aparece
+                        if len(nombre_limpio) > 60:
+                            nombre_limpio = nombre_limpio[:60] + "..."
+                            
                         productos.append({
-                            "nombre": nombre,
-                            "precio": precio,
+                            "nombre": nombre_limpio,
+                            "precio": precio_float,
                             "categoria": categoria,
                             "categoria_nombre": CATEGORIAS_PRODUCTOS[categoria]["nombre"]
                         })
+                        break # Ya clasificamos este precio, siguiente.
+                    
+                    temp_pointer = temp_pointer.parent
+                    
+            except Exception:
+                continue
+                
+        # Eliminar duplicados exactos
+        productos_unicos = []
+        vistos = set()
+        for p in productos:
+            key = (p["categoria"], p["precio"])
+            if key not in vistos:
+                vistos.add(key)
+                productos_unicos.append(p)
+                
     except Exception as e:
-        print(f"   ⚠️  Error extrayendo productos KFC: {str(e)}")
+        print(f"   ⚠️  Error extrayendo productos KFC (Heurística): {str(e)}")
     
-    return productos
+    return productos_unicos
 
 
 def extraer_productos_campestre(html: str) -> List[Dict[str, Any]]:
     """
-    Extrae productos específicos de Pollo Campestre con nombre, precio y categoría.
+    Extrae productos de Campestre usando búsqueda heurística (igual que KFC).
     """
     productos = []
     try:
         soup = BeautifulSoup(html, "lxml")
         
-        # Campestre: nombre en p.text-ocre, precio en p.text-rojo
-        # Buscar contenedores de productos
-        contenedores = soup.select("div.flex.flex-col")
+        # Estrategia: Buscar precios ($)
+        precio_pattern = re.compile(r"\$\s*\d+\.\d{2}")
+        precios_found = soup.find_all(string=precio_pattern)
         
-        for contenedor in contenedores:
-            nombre_elem = contenedor.select_one("p.text-ocre, .text-ocre")
-            precio_elem = contenedor.select_one("p.text-rojo, .text-rojo")
-            
-            if nombre_elem and precio_elem:
-                nombre = nombre_elem.get_text(strip=True)
-                precio_texto = precio_elem.get_text(strip=True)
-                precio = limpiar_precio(precio_texto)
+        for precio_node in precios_found:
+            try:
+                contenedor = precio_node.parent
+                precio_float = limpiar_precio(precio_node)
                 
-                if nombre and precio and precio > 0:
-                    categoria = clasificar_producto(nombre)
+                if not precio_float or precio_float <= 0:
+                    continue
+                    
+                temp_pointer = contenedor
+                for _ in range(6): 
+                    if not temp_pointer: break
+                    
+                    texto_completo = temp_pointer.get_text(" ", strip=True)
+                    categoria = clasificar_producto(texto_completo)
+                    
                     if categoria:
+                        nombre_limpio = texto_completo.split("$")[0].strip()
+                        if len(nombre_limpio) > 60:
+                            nombre_limpio = nombre_limpio[:60] + "..."
+                            
                         productos.append({
-                            "nombre": nombre,
-                            "precio": precio,
+                            "nombre": nombre_limpio,
+                            "precio": precio_float,
                             "categoria": categoria,
                             "categoria_nombre": CATEGORIAS_PRODUCTOS[categoria]["nombre"]
                         })
+                        break
+                    
+                    temp_pointer = temp_pointer.parent
+                    
+            except Exception:
+                continue
+                
+        # Eliminar duplicados
+        productos_unicos = []
+        vistos = set()
+        for p in productos:
+            key = (p["categoria"], p["precio"])
+            if key not in vistos:
+                vistos.add(key)
+                productos_unicos.append(p)
+                
     except Exception as e:
-        print(f"   ⚠️  Error extrayendo productos Campestre: {str(e)}")
+        print(f"   ⚠️  Error extrayendo productos Campestre (Heurística): {str(e)}")
     
-    return productos
+    return productos_unicos
 
 
 def comparar_con_campero(productos: List[Dict], competidor: str) -> List[Dict]:
