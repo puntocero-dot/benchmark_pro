@@ -62,12 +62,9 @@ COMPETIDORES = [
     {
         "nombre": "KFC El Salvador",
         "url": "https://kfc.com.sv/menu",
-        # Selector CSS para el precio - AJUSTAR según la estructura real del sitio
-        # Ejemplo: ".precio", "#price", "[data-price]", ".product-price span"
         "selector_precio": ".price, .precio, [class*='price'], [class*='precio']",
-        # Selector para el contenedor de promociones (opcional)
         "selector_promo": ".promo, .oferta, .discount, [class*='promo'], [class*='oferta']",
-        "usa_playwright": False,  # Cambiar a True si el sitio usa JS pesado
+        "usa_playwright": True,  # Habilitado para sitios con JavaScript
         "activo": True,
     },
     {
@@ -75,7 +72,7 @@ COMPETIDORES = [
         "url": "https://pollocampestre.com.sv",
         "selector_precio": ".price, .precio, [class*='price'], [class*='precio']",
         "selector_promo": ".promo, .oferta, [class*='promo']",
-        "usa_playwright": False,
+        "usa_playwright": True,  # Habilitado para sitios con JavaScript
         "activo": True,
     },
     {
@@ -83,7 +80,7 @@ COMPETIDORES = [
         "url": "https://www.campero.com/sv/",
         "selector_precio": ".price, .precio, [class*='price'], [class*='precio']",
         "selector_promo": ".promo, .oferta, [class*='promo']",
-        "usa_playwright": False,
+        "usa_playwright": True,  # Habilitado para sitios con JavaScript
         "activo": True,
     },
 ]
@@ -183,12 +180,7 @@ def obtener_html_requests(url: str) -> Optional[str]:
 
 def obtener_html_playwright(url: str) -> Optional[str]:
     """
-    PLACEHOLDER: Obtiene HTML usando Playwright para sitios con JavaScript.
-    
-    Para habilitar esta función:
-    1. Instalar: pip install playwright
-    2. Ejecutar: playwright install chromium
-    3. Descomentar el código de abajo
+    Obtiene HTML usando Playwright para sitios con JavaScript.
     
     Args:
         url: URL del sitio a scrapear
@@ -196,29 +188,22 @@ def obtener_html_playwright(url: str) -> Optional[str]:
     Returns:
         HTML como string o None si hay error
     """
-    # =========================================================================
-    # CÓDIGO PARA PLAYWRIGHT (descomentar cuando sea necesario)
-    # =========================================================================
-    # from playwright.sync_api import sync_playwright
-    # 
-    # try:
-    #     with sync_playwright() as p:
-    #         browser = p.chromium.launch(headless=True)
-    #         page = browser.new_page()
-    #         page.set_extra_http_headers(HEADERS_NAVEGADOR)
-    #         page.goto(url, wait_until="networkidle", timeout=60000)
-    #         # Esperar a que cargue el contenido dinámico
-    #         page.wait_for_timeout(3000)
-    #         html = page.content()
-    #         browser.close()
-    #         return html
-    # except Exception as e:
-    #     print(f"   ⚠️  Error con Playwright: {str(e)}")
-    #     return None
-    # =========================================================================
+    from playwright.sync_api import sync_playwright
     
-    print("   ⚠️  Playwright no está configurado. Usando Requests...")
-    return obtener_html_requests(url)
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.set_extra_http_headers(HEADERS_NAVEGADOR)
+            page.goto(url, wait_until="networkidle", timeout=60000)
+            # Esperar a que cargue el contenido dinámico
+            page.wait_for_timeout(3000)
+            html = page.content()
+            browser.close()
+            return html
+    except Exception as e:
+        print(f"   ⚠️  Error con Playwright: {str(e)}")
+        return None
 
 
 def extraer_precio(html: str, selector: str) -> Optional[float]:
