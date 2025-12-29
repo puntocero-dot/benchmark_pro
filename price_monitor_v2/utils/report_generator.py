@@ -12,36 +12,36 @@ HTML_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Price Monitor Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #111827; color: #f3f4f6; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: #10B981; text-align: center; margin-bottom: 10px; }
-        .timestamp { text-align: center; color: #9CA3AF; margin-bottom: 30px; font-size: 0.9em; }
+        body {{ font-family: 'Segoe UI', system-ui, sans-serif; background-color: #111827; color: #f3f4f6; margin: 0; padding: 20px; }}
+        .container {{ max-width: 1200px; margin: 0 auto; }}
+        h1 {{ color: #10B981; text-align: center; margin-bottom: 10px; }}
+        .timestamp {{ text-align: center; color: #9CA3AF; margin-bottom: 30px; font-size: 0.9em; }}
         
         /* Stats Cards */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .card { background: #1F2937; padding: 20px; border-radius: 12px; border: 1px solid #374151; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .card h3 { margin: 0; font-size: 0.9em; color: #9CA3AF; text-transform: uppercase; }
-        .card .value { font-size: 1.8em; font-weight: bold; color: #F9FAFB; margin-top: 5px; }
+        .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }}
+        .card {{ background: #1F2937; padding: 20px; border-radius: 12px; border: 1px solid #374151; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
+        .card h3 {{ margin: 0; font-size: 0.9em; color: #9CA3AF; text-transform: uppercase; }}
+        .card .value {{ font-size: 1.8em; font-weight: bold; color: #F9FAFB; margin-top: 5px; }}
         
         /* Comparison Table */
-        .section-title { border-left: 4px solid #10B981; padding-left: 10px; margin: 40px 0 20px; font-size: 1.5em; }
-        .table-container { overflow-x: auto; background: #1F2937; border-radius: 12px; border: 1px solid #374151; }
-        table { width: 100%; border-collapse: collapse; min-width: 800px; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #374151; }
-        th { background-color: #374151; color: #D1D5DB; font-weight: 600; }
-        tr:last-child td { border-bottom: none; }
+        .section-title {{ border-left: 4px solid #10B981; padding-left: 10px; margin: 40px 0 20px; font-size: 1.5em; }}
+        .table-container {{ overflow-x: auto; background: #1F2937; border-radius: 12px; border: 1px solid #374151; }}
+        table {{ width: 100%; border-collapse: collapse; min-width: 800px; }}
+        th, td {{ padding: 15px; text-align: left; border-bottom: 1px solid #374151; }}
+        th {{ background-color: #374151; color: #D1D5DB; font-weight: 600; }}
+        tr:last-child td {{ border-bottom: none; }}
         
-        .product-name { display: block; font-size: 0.9em; color: #D1D5DB; margin-top: 4px; }
-        .price { font-weight: bold; font-size: 1.1em; color: #F3F4F6; }
-        .best-price { color: #10B981; font-weight: 800; }
-        .best-price::after { content: ' 🔥'; }
+        .product-name {{ display: block; font-size: 0.9em; color: #D1D5DB; margin-top: 4px; }}
+        .price {{ font-weight: bold; font-size: 1.1em; color: #F3F4F6; }}
+        .best-price {{ color: #10B981; font-weight: 800; }}
+        .best-price::after {{ content: ' 🔥'; }}
         
         /* Promos */
-        .promos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .promo-list { list-style: none; padding: 0; margin: 10px 0 0; }
-        .promo-item { background: #374151; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #F59E0B; }
+        .promos-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }}
+        .promo-list {{ list-style: none; padding: 0; margin: 10px 0 0; }}
+        .promo-item {{ background: #374151; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #F59E0B; }}
         
-        footer { margin-top: 50px; text-align: center; color: #6B7280; font-size: 0.8em; }
+        footer {{ margin-top: 50px; text-align: center; color: #6B7280; font-size: 0.8em; }}
     </style>
 </head>
 <body>
