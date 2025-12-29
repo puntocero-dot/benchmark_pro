@@ -1,0 +1,30 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacksPlan]
+providers = ["python"]
+
+[[build.nixpacksPlan.phases.setup.aptPkgs]]
+name = "libnss3"
+
+[[build.nixpacksPlan.phases.setup.aptPkgs]]
+name = "libatk-bridge2.0-0"
+
+[[build.nixpacksPlan.phases.setup.aptPkgs]]
+name = "libdrm2"
+
+[[build.nixpacksPlan.phases.setup.aptPkgs]]
+name = "libxkbcommon0"
+
+[[build.nixpacksPlan.phases.setup.aptPkgs]]
+name = "libgbm1"
+
+[[build.nixpacksPlan.phases.setup.aptPkgs]]
+name = "libasound2"
+
+[build.nixpacksPlan.phases.install]
+cmds = ["pip install -r requirements.txt", "playwright install chromium"]
+
+[deploy]
+startCommand = "python price_monitor.py"
+restartPolicyType = "always"
