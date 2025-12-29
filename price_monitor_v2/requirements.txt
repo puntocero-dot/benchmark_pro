@@ -1,0 +1,7 @@
+requests
+playwright
+beautifulsoup4
+python-dotenv
+fake-useragent
+lxml
+schedule

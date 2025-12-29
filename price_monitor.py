@@ -118,14 +118,21 @@ COMPETIDORES = [
         "activo": True,
     },
     {
-        "nombre": "Pollo Campestre",
-        # URL del menú
-        "url": "https://pollocampestre.com.sv/menu-ref/2",
-        # Selector encontrado: precios usan clase text-rojo
-        "selector_precio": "p.text-rojo, .text-rojo",
-        "selector_promo": ".promo, .oferta, [class*='promo']",
+        "nombre": "Pollo Campero",
+        "url": "https://sv.campero.com/menu",
+        "selector_precio": ".menu-item-price, .product-price", 
+        "promocion_selector": "text=Oferta",
         "usa_playwright": True,
-        "activo": True,
+        "activo": True
+    },
+    {
+        "nombre": "Pollo Campestre",
+        # API Directa
+        "url": "https://api.pollocampestre.com.sv/v2/home/GetHomeConfiguration",
+        "selector_precio": "", # No se usa en modo API
+        "selector_promo": "", # No se usa en modo API
+        "usa_playwright": False,
+        "activo": True, 
     },
     {
         "nombre": "Pollo Campero (Referencia)",
@@ -195,41 +202,110 @@ def obtener_timestamp() -> str:
 
 
 # =============================================================================
-# MOTOR DE SCRAPING
-# =============================================================================
-
-def obtener_html_requests(url: str) -> Optional[str]:
+def obtener_html_campero_playwright(url: str) -> str:
     """
-    Obtiene el HTML de una página usando Requests (para sitios estáticos).
-    
-    Args:
-        url: URL del sitio a scrapear
-        
-    Returns:
-        HTML como string o None si hay error
+    Obtiene HTML de Campero expandiendo categorías interactivamente.
     """
+    print("   [Campero] Iniciando navegación interactiva...")
+    from playwright.sync_api import sync_playwright
     try:
-        response = requests.get(
-            url, 
-            headers=HEADERS_NAVEGADOR, 
-            timeout=30,
-            allow_redirects=True
-        )
-        response.raise_for_status()
-        return response.text
-    
-    except requests.exceptions.Timeout:
-        print(f"   ⚠️  Timeout al conectar con {url}")
-        return None
-    except requests.exceptions.ConnectionError:
-        print(f"   ⚠️  Error de conexión con {url}")
-        return None
-    except requests.exceptions.HTTPError as e:
-        print(f"   ⚠️  Error HTTP {e.response.status_code} en {url}")
-        return None
+        with sync_playwright() as p:
+            # Launch in headless mode
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
+            
+            print(f"   Navegando a {url}...")
+            # Use domcontentloaded + wait strategy for speed vs reliability
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            
+            # Wait specific for Campero loading
+            try:
+                page.wait_for_selector("ion-view.menu-list", timeout=20000)
+            except:
+                pass
+                
+            # Click all categories to expand
+            print("   Expandiendo categorías...")
+            try:
+                # Wait for items
+                page.wait_for_selector(".category-item", state="attached", timeout=10000)
+                cats = page.locator(".category-item").all()
+                print(f"   Encontradas {len(cats)} categorías.")
+                
+                # Logic: Click each one to ensure products are rendered in DOM
+                for i, cat in enumerate(cats):
+                    try:
+                        # Simple click
+                        if cat.is_visible():
+                            cat.click()
+                            time.sleep(0.5) 
+                    except Exception as e:
+                        pass
+                        
+                # Wait a final moment for renders
+                time.sleep(2)
+                
+            except Exception as e:
+                print(f"   Aviso: No se pudieron expandir categorías ({e})")
+                
+            html = page.content()
+            browser.close()
+            return html
     except Exception as e:
-        print(f"   ⚠️  Error inesperado: {str(e)}")
-        return None
+        print(f"   Error Playwright Campero: {e}")
+        return ""
+def obtener_html(competidor: Dict[str, Any]) -> str:
+    """
+    Obtiene el Contenido (HTML o JSON) de la página/API.
+    Maneja lógica específica para Campestre API.
+    """
+    url = competidor["url"]
+    usa_playwright = competidor.get("usa_playwright", False)
+    nombre = competidor["nombre"]
+
+    print(f"   🌐 Conectando a {nombre}...")
+
+    # CASO ESPECIAL: API Campestre
+    if "pollocampestre.com.sv" in url and "api" in url:
+        try:
+            print(f"   [Campestre API] POST a {url}")
+            payload = {"country": "sv", "language": "es"}
+            response = requests.post(
+                url, 
+                json=payload, 
+                headers={
+                    "User-Agent": "Mozilla/5.0", 
+                    "Content-Type": "application/json"
+                },
+                timeout=30
+            )
+            response.raise_for_status()
+            return response.text 
+        except Exception as e:
+            print(f"   Error en API Campestre: {e}")
+            return ""
+
+    if "sv.campero.com" in url:
+        # Lógica específica para Campero (Playwright Interactivo)
+        return obtener_html_campero_playwright(url)
+        
+    if usa_playwright:
+        return obtener_html_playwright(url)
+    else:
+        # Método tradicional con Requests
+        try:
+            resp = requests.get(url, headers=HEADERS_NAVEGADOR, timeout=30)
+            if resp.status_code == 200:
+                return resp.text
+            else:
+                print(f"   ⚠️ Error {resp.status_code} al acceder a {url}")
+                return ""
+        except Exception as e:
+            print(f"   ⚠️ Error de conexión: {str(e)}")
+            return ""
 
 
 def obtener_html_playwright(url: str) -> Optional[str]:
@@ -394,13 +470,71 @@ def extraer_productos_kfc(html: str) -> List[Dict[str, Any]]:
     return productos_unicos
 
 
-def extraer_productos_campestre(html: str) -> List[Dict[str, Any]]:
+def extraer_productos_campestre(content: str) -> List[Dict[str, Any]]:
     """
-    Extrae productos de Campestre usando búsqueda heurística (igual que KFC).
+    Extrae productos de Campestre.
+    Soporta JSON (API) o HTML (Legacy).
     """
     productos = []
+    
+    # MODO API (JSON)
+    if content.strip().startswith("{"):
+        try:
+            data = json.loads(content)
+            sections = data.get("data", {}).get("sections", [])
+            for section in sections:
+                # El nombre de la sección (ej: "Empanizados") nos sirve para clasificar?
+                # O usamos la logica de clasificar_producto sobre el nombre del item
+                cat_section = section.get("name", "")
+                
+                # Iterar items
+                items = section.get("data", [])
+                for item in items: # A veces items es el producto directo, o tiene sub-dataproducts
+                    # La estructura del API dump muestra: sections -> data[] -> dataProducts[]
+                    # El nivel 'item' tiene 'name'="Empanizados" y dentro 'dataProducts'
+                    
+                    sub_products = item.get("dataProducts", [])
+                    if not sub_products:
+                        # A veces es directo? En el dump todos tenian sub productos
+                        pass
+                        
+                    for p in sub_products:
+                        nombre = p.get("name", "")
+                        try:
+                            precio = float(p.get("salePrice", 0))
+                        except:
+                            precio = 0.0
+                            
+                        # Clasificar
+                        categoria = clasificar_producto(nombre)
+                        if categoria and precio > 0:
+                            productos.append({
+                                "nombre": nombre,
+                                "precio": precio,
+                                "categoria": categoria,
+                                "categoria_nombre": CATEGORIAS_PRODUCTOS[categoria]["nombre"]
+                            })
+                            
+            # Eliminar duplicados
+            productos_unicos = []
+            vistos = set()
+            for p in productos:
+                key = (p["categoria"], p["precio"])
+                # Opcional: key también con nombre para no borrar variantes
+                # Pero la logica original usaba cat+precio. Mantengamos eso o mejoremos.
+                if key not in vistos:
+                    vistos.add(key)
+                    productos_unicos.append(p)
+            
+            return productos_unicos
+            
+        except Exception as e:
+            print(f"   ⚠️ Error parseando JSON Campestre: {e}")
+            return []
+
+    # MODO HTML (Legacy/Fallback)
     try:
-        soup = BeautifulSoup(html, "lxml")
+        soup = BeautifulSoup(content, "lxml")
         
         # Estrategia: Buscar precios ($)
         precio_pattern = re.compile(r"\$\s*\d+\.\d{2}")
@@ -452,6 +586,68 @@ def extraer_productos_campestre(html: str) -> List[Dict[str, Any]]:
         print(f"   ⚠️  Error extrayendo productos Campestre (Heurística): {str(e)}")
     
     return productos_unicos
+
+
+def extraer_productos_campero(html: str) -> List[Dict[str, Any]]:
+    """
+    Extrae productos de Pollo Campero usando heurística de precios sobre HTML expandido.
+    """
+    productos = []
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        
+        # Estrategia: Buscar precios ($)
+        # Campero usa <span class="price"> o similar tras renderizado
+        precio_pattern = re.compile(r"\$\s*\d+\.\d{2}")
+        precios_found = soup.find_all(string=precio_pattern)
+        
+        for precio_node in precios_found:
+            try:
+                contenedor = precio_node.parent
+                precio_float = limpiar_precio(precio_node)
+                
+                if not precio_float or precio_float <= 0:
+                    continue
+                    
+                # Subir buscando contexto de nombre
+                temp_pointer = contenedor
+                for _ in range(6): 
+                    if not temp_pointer: break
+                    
+                    texto_completo = temp_pointer.get_text(" ", strip=True)
+                    categoria = clasificar_producto(texto_completo)
+                    
+                    if categoria:
+                        nombre_limpio = texto_completo.split("$")[0].strip()
+                        if len(nombre_limpio) > 80:
+                            nombre_limpio = nombre_limpio[:80] + "..."
+                            
+                        productos.append({
+                            "nombre": nombre_limpio,
+                            "precio": precio_float,
+                            "categoria": categoria,
+                            "categoria_nombre": CATEGORIAS_PRODUCTOS[categoria]["nombre"]
+                        })
+                        break
+                    
+                    temp_pointer = temp_pointer.parent
+            except Exception:
+                continue
+        
+        # Eliminar duplicados
+        productos_unicos = []
+        vistos = set()
+        for p in productos:
+            key = (p["categoria"], p["precio"])
+            if key not in vistos:
+                vistos.add(key)
+                productos_unicos.append(p)
+                
+        return productos_unicos
+            
+    except Exception as e:
+        print(f"   ⚠️  Error extrayendo productos Campero: {str(e)}")
+        return []
 
 
 def comparar_con_campero(productos: List[Dict], competidor: str) -> List[Dict]:
@@ -751,11 +947,8 @@ def revisar_competidor(competidor: Dict[str, Any], historial: Dict[str, Any]) ->
     print(f"\n🔍 Revisando: {nombre}")
     print(f"   URL: {url}")
     
-    # Obtener HTML según el método configurado
-    if usa_playwright:
-        html = obtener_html_playwright(url)
-    else:
-        html = obtener_html_requests(url)
+    # Obtener HTML/JSON según método unificado
+    html = obtener_html(competidor)
     
     if not html:
         print(f"   ❌ No se pudo obtener el HTML de {nombre}")
@@ -772,6 +965,8 @@ def revisar_competidor(competidor: Dict[str, Any], historial: Dict[str, Any]) ->
         productos = extraer_productos_kfc(html)
     elif "Campestre" in nombre:
         productos = extraer_productos_campestre(html)
+    elif "Campero" in nombre:
+        productos = extraer_productos_campero(html)
     else:
         # Extracción genérica para otros competidores
         precio = extraer_precio(html, selector)

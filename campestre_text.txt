@@ -1,0 +1,13 @@
+Iniciar sesión
+Ingresa a tu cuenta
+
+Por favor, ingresa tus datos.
+
+Correo*
+Contraseña*
+Recordar mis datos
+¿Olvidaste tu contraseña?
+Iniciar Sesión
+Puedes iniciar sesión con:
+¿Aún no tienes una cuenta?
+Regístrate
