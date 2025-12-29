@@ -41,6 +41,46 @@ ARCHIVO_HISTORIAL = "precios_historial.json"
 # Keywords para detectar promociones (case-insensitive)
 KEYWORDS_PROMOCION = ["off", "promo", "descuento", "oferta", "2x1", "gratis", "especial"]
 
+# =============================================================================
+# CATEGORÍAS DE PRODUCTOS - Solo pollo, sin pizza
+# =============================================================================
+CATEGORIAS_PRODUCTOS = {
+    "combo_individual": {
+        "nombre": "Combo Individual",
+        "keywords": ["combo", "box", "menú", "menu", "kruncher", "personal", "individual"],
+        "excluir": ["familiar", "compartir", "pack", "banquete", "pizza"],
+    },
+    "combo_familiar": {
+        "nombre": "Combo Familiar",
+        "keywords": ["familiar", "compartir", "pack", "banquete", "bucket", "full"],
+        "excluir": ["pizza"],
+    },
+    "alitas": {
+        "nombre": "Alitas",
+        "keywords": ["alita", "wing", "alitas", "wings"],
+        "excluir": ["pizza"],
+    },
+}
+
+# =============================================================================
+# PRECIOS DE REFERENCIA - POLLO CAMPERO (para comparar)
+# Tienda: Alameda Roosevelt y 61 Av. Sur #3134, S.S
+# =============================================================================
+PRECIOS_REFERENCIA_CAMPERO = {
+    "combo_individual": {
+        "nombre": "Menú Campero Individual",
+        "precio": 7.50,  # Precio aproximado a verificar
+    },
+    "combo_familiar": {
+        "nombre": "Combo Familiar Campero",
+        "precio": 25.00,  # Precio aproximado a verificar
+    },
+    "alitas": {
+        "nombre": "Alitas Campero (12 uds)",
+        "precio": 8.99,  # Precio aproximado a verificar
+    },
+}
+
 # Headers realistas para simular navegación
 HEADERS_NAVEGADOR = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -236,13 +276,11 @@ def extraer_precio(html: str, selector: str) -> Optional[float]:
                 return precio
         
         # Si no encuentra con el selector, buscar patrones de precio en todo el HTML
-        # Esto es un fallback para sitios con estructura variable
         texto_completo = soup.get_text()
         patron_precio = r"\$\s*(\d+[.,]\d{2})"
         coincidencias = re.findall(patron_precio, texto_completo)
         
         if coincidencias:
-            # Retornar el primer precio encontrado
             return float(coincidencias[0].replace(",", "."))
         
         return None
@@ -250,6 +288,137 @@ def extraer_precio(html: str, selector: str) -> Optional[float]:
     except Exception as e:
         print(f"   ⚠️  Error al extraer precio: {str(e)}")
         return None
+
+
+def clasificar_producto(nombre_producto: str) -> Optional[str]:
+    """
+    Clasifica un producto en una categoría basándose en su nombre.
+    
+    Args:
+        nombre_producto: Nombre del producto
+        
+    Returns:
+        ID de categoría o None si no aplica
+    """
+    nombre_lower = nombre_producto.lower()
+    
+    for categoria_id, config in CATEGORIAS_PRODUCTOS.items():
+        # Verificar si tiene palabras a excluir
+        tiene_exclusion = any(excl in nombre_lower for excl in config["excluir"])
+        if tiene_exclusion:
+            continue
+        
+        # Verificar si tiene keywords de la categoría
+        tiene_keyword = any(kw in nombre_lower for kw in config["keywords"])
+        if tiene_keyword:
+            return categoria_id
+    
+    return None
+
+
+def extraer_productos_kfc(html: str) -> List[Dict[str, Any]]:
+    """
+    Extrae productos específicos de KFC con nombre, precio y categoría.
+    """
+    productos = []
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        
+        # KFC: productos están en buttons con h2 para nombre y td para precio
+        botones = soup.select("button")
+        
+        for boton in botones:
+            nombre_elem = boton.select_one("h2")
+            precio_elem = boton.select_one("td")
+            
+            if nombre_elem and precio_elem:
+                nombre = nombre_elem.get_text(strip=True)
+                precio_texto = precio_elem.get_text(strip=True)
+                precio = limpiar_precio(precio_texto)
+                
+                if nombre and precio and precio > 0:
+                    categoria = clasificar_producto(nombre)
+                    if categoria:  # Solo productos que caen en nuestras categorías
+                        productos.append({
+                            "nombre": nombre,
+                            "precio": precio,
+                            "categoria": categoria,
+                            "categoria_nombre": CATEGORIAS_PRODUCTOS[categoria]["nombre"]
+                        })
+    except Exception as e:
+        print(f"   ⚠️  Error extrayendo productos KFC: {str(e)}")
+    
+    return productos
+
+
+def extraer_productos_campestre(html: str) -> List[Dict[str, Any]]:
+    """
+    Extrae productos específicos de Pollo Campestre con nombre, precio y categoría.
+    """
+    productos = []
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        
+        # Campestre: nombre en p.text-ocre, precio en p.text-rojo
+        # Buscar contenedores de productos
+        contenedores = soup.select("div.flex.flex-col")
+        
+        for contenedor in contenedores:
+            nombre_elem = contenedor.select_one("p.text-ocre, .text-ocre")
+            precio_elem = contenedor.select_one("p.text-rojo, .text-rojo")
+            
+            if nombre_elem and precio_elem:
+                nombre = nombre_elem.get_text(strip=True)
+                precio_texto = precio_elem.get_text(strip=True)
+                precio = limpiar_precio(precio_texto)
+                
+                if nombre and precio and precio > 0:
+                    categoria = clasificar_producto(nombre)
+                    if categoria:
+                        productos.append({
+                            "nombre": nombre,
+                            "precio": precio,
+                            "categoria": categoria,
+                            "categoria_nombre": CATEGORIAS_PRODUCTOS[categoria]["nombre"]
+                        })
+    except Exception as e:
+        print(f"   ⚠️  Error extrayendo productos Campestre: {str(e)}")
+    
+    return productos
+
+
+def comparar_con_campero(productos: List[Dict], competidor: str) -> List[Dict]:
+    """
+    Compara productos encontrados con los precios de referencia de Campero.
+    
+    Returns:
+        Lista de alertas cuando un competidor tiene precio menor
+    """
+    alertas = []
+    
+    for producto in productos:
+        categoria = producto["categoria"]
+        
+        if categoria in PRECIOS_REFERENCIA_CAMPERO:
+            precio_campero = PRECIOS_REFERENCIA_CAMPERO[categoria]["precio"]
+            precio_competidor = producto["precio"]
+            
+            if precio_competidor < precio_campero:
+                diferencia = precio_campero - precio_competidor
+                porcentaje = (diferencia / precio_campero) * 100
+                
+                alertas.append({
+                    "tipo": "competidor_mas_barato",
+                    "competidor": competidor,
+                    "producto": producto["nombre"],
+                    "categoria": producto["categoria_nombre"],
+                    "precio_competidor": precio_competidor,
+                    "precio_campero": precio_campero,
+                    "diferencia": diferencia,
+                    "porcentaje": porcentaje,
+                })
+    
+    return alertas
 
 
 def detectar_promociones(html: str, keywords: List[str] = None) -> List[str]:
@@ -464,6 +633,33 @@ def formatear_alerta(
     return mensaje
 
 
+def formatear_alerta_comparacion(alerta: Dict[str, Any]) -> str:
+    """
+    Formatea mensaje de alerta cuando competidor está más barato que Campero.
+    
+    Args:
+        alerta: Diccionario con datos de la alerta de comparación
+        
+    Returns:
+        Mensaje formateado en HTML para Telegram
+    """
+    mensaje = f"""
+⚠️ <b>ALERTA: COMPETIDOR MÁS BARATO</b> ⚠️
+
+🏪 <b>Competidor:</b> {alerta['competidor']}
+📦 <b>Producto:</b> {alerta['producto']}
+📂 <b>Categoría:</b> {alerta['categoria']}
+
+💰 <b>Precio Competidor:</b> ${alerta['precio_competidor']:.2f}
+🐔 <b>Precio Campero:</b> ${alerta['precio_campero']:.2f}
+
+💥 <b>Diferencia:</b> ${alerta['diferencia']:.2f} menos ({alerta['porcentaje']:.1f}%)
+
+⏰ <i>{obtener_timestamp()}</i>
+"""
+    return mensaje
+
+
 # =============================================================================
 # LÓGICA PRINCIPAL DE MONITOREO
 # =============================================================================
@@ -471,6 +667,7 @@ def formatear_alerta(
 def revisar_competidor(competidor: Dict[str, Any], historial: Dict[str, Any]) -> Dict[str, Any]:
     """
     Revisa un competidor individual y genera alertas si corresponde.
+    Ahora extrae productos por categoría y compara con precios de Campero.
     
     Args:
         competidor: Diccionario con datos del competidor
@@ -497,54 +694,82 @@ def revisar_competidor(competidor: Dict[str, Any], historial: Dict[str, Any]) ->
         print(f"   ❌ No se pudo obtener el HTML de {nombre}")
         return historial
     
-    # Extraer precio
-    precio = extraer_precio(html, selector)
+    # =========================================================================
+    # EXTRACCIÓN DE PRODUCTOS POR CATEGORÍA
+    # =========================================================================
     
-    if precio is None:
-        print(f"   ⚠️  No se encontró precio en {nombre}")
-        print(f"   💡 Tip: Verifica el selector CSS o activa Playwright")
+    productos = []
+    
+    # Usar extractor específico según el competidor
+    if "KFC" in nombre:
+        productos = extraer_productos_kfc(html)
+    elif "Campestre" in nombre:
+        productos = extraer_productos_campestre(html)
+    else:
+        # Extracción genérica para otros competidores
+        precio = extraer_precio(html, selector)
+        if precio:
+            productos = [{"nombre": nombre, "precio": precio, "categoria": None, "categoria_nombre": "General"}]
+    
+    if not productos:
+        # Fallback: intentar extracción genérica
+        precio = extraer_precio(html, selector)
+        if precio:
+            print(f"   � Precio genérico encontrado: ${precio:.2f}")
+        else:
+            print(f"   ⚠️  No se encontraron productos en {nombre}")
         return historial
     
-    print(f"   💰 Precio encontrado: ${precio:.2f}")
+    # Mostrar productos encontrados
+    print(f"   � Productos encontrados: {len(productos)}")
+    for p in productos[:5]:  # Mostrar máximo 5
+        print(f"      • {p['categoria_nombre']}: {p['nombre']} - ${p['precio']:.2f}")
     
     # Detectar promociones
     promociones = detectar_promociones(html)
     
     if promociones:
-        print(f"   🏷️  Promociones detectadas: {', '.join(promociones)}")
-    
-    # Obtener precio anterior
-    precio_anterior = None
-    if nombre in historial["competidores"]:
-        precio_anterior = historial["competidores"][nombre].get("precio_actual")
-    
-    # Actualizar historial
-    historial = actualizar_precio_historial(historial, nombre, precio, promociones)
+        print(f"   🏷️  Promociones: {', '.join(promociones)}")
     
     # =========================================================================
-    # LÓGICA DE ALERTAS
+    # COMPARACIÓN CON PRECIOS DE CAMPERO
     # =========================================================================
     
-    alerta_enviada = False
+    alertas_comparacion = comparar_con_campero(productos, nombre)
     
-    # Alerta 1: Precio menor al anterior
-    if precio_anterior and precio < precio_anterior:
-        print(f"   🚨 ¡ALERTA! Precio bajó de ${precio_anterior:.2f} a ${precio:.2f}")
+    for alerta in alertas_comparacion:
+        print(f"   ⚠️  ¡{nombre} más barato en {alerta['categoria']}!")
+        print(f"      Competidor: ${alerta['precio_competidor']:.2f} vs Campero: ${alerta['precio_campero']:.2f}")
         
-        mensaje = formatear_alerta(
-            nombre, precio, precio_anterior, promociones, "PRECIO_BAJO"
-        )
+        # Enviar alerta a Telegram
+        mensaje = formatear_alerta_comparacion(alerta)
         enviar_telegram(mensaje)
-        alerta_enviada = True
     
-    # Alerta 2: Promoción detectada (solo si no se envió alerta de precio)
-    if promociones and not alerta_enviada:
-        print(f"   🎯 ¡PROMOCIÓN DETECTADA!")
+    # =========================================================================
+    # ACTUALIZAR HISTORIAL CON PRODUCTOS CATEGORIZADOS
+    # =========================================================================
+    
+    # Guardar el producto más relevante por categoría
+    for producto in productos:
+        key = f"{nombre} - {producto['categoria_nombre']}"
         
-        mensaje = formatear_alerta(
-            nombre, precio, precio_anterior, promociones, "PROMOCIÓN"
+        precio_anterior = None
+        if key in historial["competidores"]:
+            precio_anterior = historial["competidores"][key].get("precio_actual")
+        
+        historial = actualizar_precio_historial(
+            historial, key, producto["precio"], promociones
         )
-        enviar_telegram(mensaje)
+        
+        # Alerta de cambio de precio (bajó respecto a antes)
+        if precio_anterior and producto["precio"] < precio_anterior:
+            diferencia = precio_anterior - producto["precio"]
+            print(f"   📉 ¡{key} bajó ${diferencia:.2f}!")
+            
+            mensaje = formatear_alerta(
+                key, producto["precio"], precio_anterior, promociones, "PRECIO_BAJO"
+            )
+            enviar_telegram(mensaje)
     
     return historial
 
