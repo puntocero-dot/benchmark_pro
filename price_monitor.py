@@ -35,6 +35,9 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# Intervalo de revisión en horas (configurable via .env o aquí)
+INTERVALO_HORAS = int(os.getenv("INTERVALO_HORAS", "4"))
+
 # Archivo para persistencia de datos
 ARCHIVO_HISTORIAL = "precios_historial.json"
 
@@ -817,22 +820,22 @@ def revisar_todos_los_competidores() -> None:
     # Resumen
     print("\n" + "-" * 60)
     print(f"📊 RESUMEN: {procesados} procesados, {errores} errores")
-    print(f"⏰ Próxima revisión en 4 horas")
+    print(f"⏰ Próxima revisión en {INTERVALO_HORAS} horas")
     print("=" * 60 + "\n")
 
 
 # =============================================================================
-# SCHEDULER - AUTOMATIZACIÓN CADA 4 HORAS
+# SCHEDULER - AUTOMATIZACIÓN CONFIGURABLE
 # =============================================================================
 
 def iniciar_scheduler() -> None:
     """
-    Inicia el scheduler para ejecutar la revisión cada 4 horas.
+    Inicia el scheduler para ejecutar la revisión según INTERVALO_HORAS.
     """
     print("\n" + "=" * 60)
     print("🚀 MONITOR DE PRECIOS - INICIADO")
     print("=" * 60)
-    print(f"⏰ Revisiones programadas cada 4 horas")
+    print(f"⏰ Revisiones programadas cada {INTERVALO_HORAS} hora(s)")
     print(f"📍 Competidores configurados: {len([c for c in COMPETIDORES if c.get('activo', True)])}")
     print(f"📁 Archivo de historial: {ARCHIVO_HISTORIAL}")
     
@@ -846,8 +849,8 @@ def iniciar_scheduler() -> None:
     # Ejecutar inmediatamente al iniciar
     revisar_todos_los_competidores()
     
-    # Programar ejecución cada 4 horas
-    schedule.every(4).hours.do(revisar_todos_los_competidores)
+    # Programar ejecución según intervalo configurado
+    schedule.every(INTERVALO_HORAS).hours.do(revisar_todos_los_competidores)
     
     # Loop principal
     print("\n🔄 Scheduler activo. Presiona Ctrl+C para detener.\n")
