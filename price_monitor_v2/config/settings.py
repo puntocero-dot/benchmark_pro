@@ -23,29 +23,34 @@ CATEGORIAS_PRODUCTOS = {
     "hamburguesas": {
         "nombre": "Hamburguesas / Sandwiches",
         "keywords": ["kruncher", "sandwich", "hamburguesa", "burger", "bacon"],
-        "excluir": ["pizza"],
+        "excluir": ["pizza", "postre", "brownie", "pastel", "pie", "helado"],
     },
     "pollo_individual": {
         "nombre": "Menú Pollo Individual",
         "keywords": ["combo", "box", "menú", "menu", "personal", "individual", "2 piezas", "3 piezas"],
-        "excluir": ["familiar", "compartir", "pack", "banquete", "pizza", "kruncher", "sandwich"],
+        "excluir": ["familiar", "compartir", "pack", "banquete", "pizza", "kruncher", "sandwich", "postre", "brownie", "pastel", "pie", "helado"],
     },
     "pollo_familiar": {
         "nombre": "Pollo Familiar / Compartir",
         "keywords": ["familiar", "compartir", "pack", "banquete", "bucket", "full", "8 piezas", "12 piezas"],
-        "excluir": ["pizza"],
+        "excluir": ["pizza", "postre", "brownie", "pastel", "pie", "helado"],
     },
     "alitas": {
         "nombre": "Alitas",
         "keywords": ["alita", "wing", "alitas", "wings"],
-        "excluir": ["pizza"],
+        "excluir": ["pizza", "postre", "brownie", "pastel", "pie", "helado"],
+    },
+    "postres": {
+        "nombre": "Postres",
+        "keywords": ["postre", "brownie", "pastel", "pie", "tres leches", "flan", "helado", "sundae"],
+        "excluir": ["combo", "menu", "pollo"],
     },
 }
 
 PRECIOS_REFERENCIA_CAMPERO = {
     "hamburguesas": {
         "nombre": "Sandwich Campero",
-        "precio": 0.0, # Will be updated dynamically
+        "precio": 0.0, 
     },
     "pollo_individual": {
         "nombre": "Menú Campero (2 piezas)",
@@ -58,6 +63,10 @@ PRECIOS_REFERENCIA_CAMPERO = {
     "alitas": {
         "nombre": "Menú Alitas",
         "precio": 9.40,
+    },
+    "postres": {
+        "nombre": "Postre Campero",
+        "precio": 0.0,
     },
 }
 
