@@ -61,27 +61,33 @@ HEADERS_NAVEGADOR = {
 COMPETIDORES = [
     {
         "nombre": "KFC El Salvador",
-        "url": "https://kfc.com.sv/menu",
-        "selector_precio": ".price, .precio, [class*='price'], [class*='precio']",
-        "selector_promo": ".promo, .oferta, .discount, [class*='promo'], [class*='oferta']",
-        "usa_playwright": True,  # Habilitado para sitios con JavaScript
+        # URL corregida - redirige a /categorias
+        "url": "https://www.kfc.com.sv/categorias",
+        # Selector encontrado: precios están en td dentro de buttons
+        "selector_precio": "button td, button table td",
+        "selector_promo": ".promo, .oferta, .discount, [class*='promo']",
+        "usa_playwright": True,
         "activo": True,
     },
     {
         "nombre": "Pollo Campestre",
-        "url": "https://pollocampestre.com.sv",
-        "selector_precio": ".price, .precio, [class*='price'], [class*='precio']",
+        # URL del menú
+        "url": "https://pollocampestre.com.sv/menu-ref/2",
+        # Selector encontrado: precios usan clase text-rojo
+        "selector_precio": "p.text-rojo, .text-rojo",
         "selector_promo": ".promo, .oferta, [class*='promo']",
-        "usa_playwright": True,  # Habilitado para sitios con JavaScript
+        "usa_playwright": True,
         "activo": True,
     },
     {
         "nombre": "Pollo Campero (Referencia)",
-        "url": "https://www.campero.com/sv/",
-        "selector_precio": ".price, .precio, [class*='price'], [class*='precio']",
+        # Nota: Este sitio requiere seleccionar tienda antes de ver precios
+        # Por ahora lo dejamos inactivo hasta implementar flujo completo
+        "url": "https://sv.campero.com/menu/productos-nuevos",
+        "selector_precio": ".product-price-content span, .product-price",
         "selector_promo": ".promo, .oferta, [class*='promo']",
-        "usa_playwright": True,  # Habilitado para sitios con JavaScript
-        "activo": True,
+        "usa_playwright": True,
+        "activo": False,  # Requiere selección de tienda - flujo complejo
     },
 ]
 
