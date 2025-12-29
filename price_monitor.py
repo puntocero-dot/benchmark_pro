@@ -65,19 +65,20 @@ CATEGORIAS_PRODUCTOS = {
 # =============================================================================
 # PRECIOS DE REFERENCIA - POLLO CAMPERO (para comparar)
 # Tienda: Alameda Roosevelt y 61 Av. Sur #3134, S.S
+# Actualizados: 2024-12-29
 # =============================================================================
 PRECIOS_REFERENCIA_CAMPERO = {
     "combo_individual": {
-        "nombre": "Menú Campero Individual",
-        "precio": 7.50,  # Precio aproximado a verificar
+        "nombre": "Menú Campero (2 piezas + acompañamiento + bebida)",
+        "precio": 6.90,
     },
     "combo_familiar": {
-        "nombre": "Combo Familiar Campero",
-        "precio": 25.00,  # Precio aproximado a verificar
+        "nombre": "Combo 12 Piezas (12 piezas + 6 acompañamientos)",
+        "precio": 25.95,
     },
     "alitas": {
-        "nombre": "Alitas Campero (12 uds)",
-        "precio": 8.99,  # Precio aproximado a verificar
+        "nombre": "Menú Súper Campero de Alitas (9 alitas + 2 acompañamientos)",
+        "precio": 9.40,
     },
 }
 
