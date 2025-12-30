@@ -29,6 +29,10 @@ def start_web_server():
                 self.path = "/dashboard.html"
             return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
+        def address_string(self):
+            # Optim: Disable reverse DNS lookup to prevent lag
+            return self.client_address[0]
+
     # Use ThreadingTCPServer to prevent blocking
     with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), DashboardHandler) as httpd:
         print(f"🌍 Web server running on port {PORT}")
