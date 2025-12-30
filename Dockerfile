@@ -1,5 +1,7 @@
 FROM mcr.microsoft.com/playwright/python:v1.57.0-jammy
 
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 # Install system deps if needed (usually python image has them)
