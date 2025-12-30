@@ -26,7 +26,8 @@ class CamperoParser(BaseParser):
             print(f"   [Campero] Fetching category: {path}...")
             # We treat each as a separate page load. 
             # We don't need the interactive callback anymore since we go directly to the view.
-            html = self.network.fetch_with_playwright(target_url)
+            # We WAIT for "$" text to ensure prices are loaded.
+            html = self.network.fetch_with_playwright(target_url, wait_selector="text=$")
             full_content += html + "\n<!-- SPLIT -->\n"
             time.sleep(1) # Polite delay
             

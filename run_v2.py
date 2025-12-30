@@ -29,8 +29,8 @@ def start_web_server():
                 self.path = "/dashboard.html"
             return http.server.SimpleHTTPRequestHandler.do_GET(self, self)
 
-    # Use ThreadingTCPServer
-    with socketserver.TCPServer(("0.0.0.0", PORT), DashboardHandler) as httpd:
+    # Use ThreadingTCPServer to prevent blocking
+    with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), DashboardHandler) as httpd:
         print(f"🌍 Web server running on port {PORT}")
         httpd.serve_forever()
 
