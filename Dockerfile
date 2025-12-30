@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY price_monitor_v2/ price_monitor_v2/
 COPY run_v2.py .
 
+# Trigger playwright install to ensure browsers are ready
+RUN playwright install chromium
+
 # Trigger playwright install just in case (though base image has it)
 # RUN playwright install chromium
 

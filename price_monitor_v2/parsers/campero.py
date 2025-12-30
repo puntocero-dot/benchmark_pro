@@ -7,27 +7,34 @@ from price_monitor_v2.config.settings import CATEGORIAS_PRODUCTOS
 
 class CamperoParser(BaseParser):
     def fetch_data(self, url: str) -> str:
-        return self.network.fetch_with_playwright(url, interactive_callback=self._expand_categories)
-
-    def _expand_categories(self, page):
-        print("   [Campero] Expanding categories interactively...")
-        try:
-            # Wait for items
-            page.wait_for_selector(".category-item", state="attached", timeout=15000)
-            cats = page.locator(".category-item").all()
-            print(f"   Found {len(cats)} categories.")
+        """
+        Fetches multiple category pages to ensure coverage of all products.
+        Ignores the base 'url' argument in favor of specific paths.
+        """
+        base_url = "https://sv.campero.com"
+        paths = [
+            "/menu/pollo-tradicional",
+            "/menu/para-compartir",
+            "/menu/hamburguesas-y-sandwiches",
+            "/menu/postres",
+            "/menu/campero-y-mas"  # Often has extras/wings
+        ]
+        
+        full_content = ""
+        for path in paths:
+            target_url = base_url + path
+            print(f"   [Campero] Fetching category: {path}...")
+            # We treat each as a separate page load. 
+            # We don't need the interactive callback anymore since we go directly to the view.
+            html = self.network.fetch_with_playwright(target_url)
+            full_content += html + "\n<!-- SPLIT -->\n"
+            time.sleep(1) # Polite delay
             
-            # Click each one to ensure products are rendered in DOM
-            for i, cat in enumerate(cats):
-                try:
-                    if cat.is_visible():
-                        cat.click()
-                        time.sleep(0.5) 
-                except Exception:
-                    pass
-            time.sleep(2)
-        except Exception as e:
-            print(f"   [Campero] Warning: Failed to expand categories ({e})")
+        return full_content
+
+    # _expand_categories is no longer needed but we can keep it deprecated or remove it.
+    def _expand_categories(self, page):
+        pass
 
     def extract_products(self, content: str) -> List[Dict[str, Any]]:
         return extract_products_by_heuristics(content, CATEGORIAS_PRODUCTOS)

@@ -65,7 +65,10 @@ class NetworkManager:
                 proxy_cfg = self._get_proxy_config()
                 
                 # Launch options
-                launch_args = {"headless": True}
+                launch_args = {
+                    "headless": True,
+                    "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+                }
                 if proxy_cfg:
                     launch_args["proxy"] = proxy_cfg
                 
