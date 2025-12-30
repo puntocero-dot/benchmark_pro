@@ -27,7 +27,7 @@ def start_web_server():
             # Redirect root to dashboard.html
             if self.path == "/":
                 self.path = "/dashboard.html"
-            return http.server.SimpleHTTPRequestHandler.do_GET(self, self)
+            return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
     # Use ThreadingTCPServer to prevent blocking
     with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), DashboardHandler) as httpd:

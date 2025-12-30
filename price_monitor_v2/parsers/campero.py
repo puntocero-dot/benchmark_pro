@@ -26,10 +26,10 @@ class CamperoParser(BaseParser):
             print(f"   [Campero] Fetching category: {path}...")
             # We treat each as a separate page load. 
             # We don't need the interactive callback anymore since we go directly to the view.
-            # We WAIT for "$" text to ensure prices are loaded.
-            html = self.network.fetch_with_playwright(target_url, wait_selector="text=$")
+            # Relaxed wait: We rely on page load + generous sleep for Angular hydration.
+            html = self.network.fetch_with_playwright(target_url)
             full_content += html + "\n<!-- SPLIT -->\n"
-            time.sleep(1) # Polite delay
+            time.sleep(7) # Generous wait for dynamic content
             
         return full_content
 
